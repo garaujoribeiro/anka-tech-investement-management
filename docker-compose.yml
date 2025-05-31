@@ -6,12 +6,12 @@ services:
     container_name: investment_db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_password_123
-      MYSQL_DATABASE: investment_db
-      MYSQL_USER: investment_user
-      MYSQL_PASSWORD: investment_pass_123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      - "${DB_PORT}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -24,10 +24,10 @@ services:
     container_name: investment_backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql://investment_user:investment_pass_123@db:3306/investment_db
-      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: ${BACKEND_PORT}
     ports:
-      - "3001:3001"
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
       - db
     networks:
@@ -43,9 +43,9 @@ services:
     container_name: investment_frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT}:3000"
     depends_on:
       - backend
     networks:
