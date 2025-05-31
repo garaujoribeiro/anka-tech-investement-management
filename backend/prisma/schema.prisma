@@ -13,3 +13,71 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+enum Status {
+  ACTIVE // Ativo
+  INACTIVE // Inativo
+}
+
+enum AssetType {
+  STOCK  // Ações
+  FUND   // Fundos
+  BOND   // Títulos
+  ETF    // ETFs
+  CRYPTO // Criptomoedas
+}
+
+model Client {
+  id  String @id @default(cuid())
+  name String @db.VarChar(255)
+  email String @unique @db.VarChar(255)
+  status Status @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("clients")
+
+  // relationships
+  ClientAssetAllocation ClientAssetAllocation[]
+}
+
+// DISCLAIMER: Current Value Field Decision
+// Decidi não incluir um campo 'currentValue' no modelo Asset pelos seguintes motivos:
+// 1. Valores de ativos são altamente voláteis e mudam constantemente
+// 2. Armazenar valores estáticos no banco pode gerar inconsistências
+// 3. Valores atuais devem ser obtidos via APIs externas em tempo real
+// 4. Esta abordagem garante dados sempre atualizados e precisos
+// 5. Evita problemas de sincronização e dados obsoletos
+
+model Asset {
+  id String @id @default(cuid())
+  name String @db.VarChar(255)
+  type AssetType
+  description String? @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("assets")
+  // relationships
+  ClientAssetAllocation ClientAssetAllocation[]
+}
+
+model ClientAssetAllocation {
+  id String @id @default(cuid())
+  clientId String @map("client_id")
+  assetId String @map("asset_id")
+  quantity Decimal @db.Decimal(10, 2) 
+  purchasePrice Decimal @db.Decimal(10, 2) @map("purchase_price")
+
+  // DISCLAIMER: Purchase Date Field Decision
+  // Decidi não incluir um campo 'purchaseDate' no modelo ClientAssetAllocation pelos seguintes motivos:
+  // 1. Cada compra de ativo é registrada atomicamente como uma nova alocação
+  // 2. A informação de data de compra pode ser inferida através do campo 'createdAt'
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id])
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  @@map("client_asset_allocations")
+}
