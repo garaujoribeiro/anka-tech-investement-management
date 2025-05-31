@@ -26,6 +26,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       PORT: ${BACKEND_PORT}
+      SHADOW_DATABASE_URL: ${SHADOW_DATABASE_URL}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
