@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  ACTIVE // Ativo
+  INACTIVE // Inativo
+}
+
+enum AssetType {
+  STOCK // Ações
+  FUND // Fundos
+  BOND // Títulos
+  ETF // ETFs
+  CRYPTO // Criptomoedas
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // relationships
+  Allocation Allocation[]
+
+  @@map("clients")
+}
+
+// DISCLAIMER: Current Value Field Decision
+// O correto deveria não utilizar um valor fixo para o valor atual do ativo,
+// mas sim calcular o valor atual com base no preço de mercado.
+// uma forma seria ter um servico que nos fornece o valor atual em realtime e criar um campo de 
+// fk para acessar esse serviço.
+model Asset {
+  id           String       @id @default(cuid())
+  name         String       @db.VarChar(255)
+  type         AssetType
+  currentValue Decimal      @db.Decimal(10, 2)
+  symbol       String       @db.VarChar(50)
+  description  String?      @db.VarChar(500)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  // relationships
+  Allocation   Allocation[]
+
+  @@map("assets")
+}
+
+model Allocation {
+  id        String   @id @default(cuid())
+  clientId  String   @map("client_id")
+  assetId   String   @map("asset_id")
+  txCount   Int      @default(0) @map("number_of_transactions")
+  quantity  Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client      Client        @relation(fields: [clientId], references: [id])
+  asset       Asset         @relation(fields: [assetId], references: [id])
+  Transaction Transaction[]
+
+  @@unique([clientId, assetId])
+  @@map("allocations")
+}
+
+model Transaction {
+  id           String          @id @default(uuid())
+  allocation   Allocation      @relation(fields: [allocationId], references: [id])
+  allocationId String          @map("allocation_id")
+  type         TransactionType
+  quantity     Decimal         @db.Decimal(10, 2)
+  price        Decimal         @db.Decimal(10, 2)
+  date         DateTime        @default(now())
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  BUY
+  SELL
+}

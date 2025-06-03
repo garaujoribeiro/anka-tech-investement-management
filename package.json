@@ -1,0 +1,17 @@
+{
+  "name": "investment-tracker",
+  "version": "1.0.0",
+  "description": "Sistema completo de controle de investimentos",
+  "private": true,
+  "scripts": {
+    "docker:up": "docker compose up --build backend",
+    "docker:down": "docker compose down",
+    "docker:clean": "docker compose down -v && docker system prune -f",
+    "docker:logs": "docker compose logs -f",
+    "db:migrate": "docker compose exec backend npx prisma migrate dev",
+    "db:reset": "docker compose exec backend npx prisma migrate reset",
+    "db:studio": "docker compose exec backend npx prisma studio",
+    "db:generate": "docker compose exec backend npx prisma generate",
+    "db:seed": "docker compose exec backend npx ts-node prisma/seed.ts"
+  }
+}
