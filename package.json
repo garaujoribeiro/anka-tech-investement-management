@@ -11,6 +11,7 @@
     "db:migrate": "docker compose exec backend npx prisma migrate dev",
     "db:reset": "docker compose exec backend npx prisma migrate reset",
     "db:studio": "docker compose exec backend npx prisma studio",
-    "db:generate": "docker compose exec backend npx prisma generate"
+    "db:generate": "docker compose exec backend npx prisma generate",
+    "db:seed": "docker compose exec backend npx ts-node prisma/seed.ts"
   }
 }

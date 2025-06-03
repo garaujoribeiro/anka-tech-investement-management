@@ -20,64 +20,77 @@ enum Status {
 }
 
 enum AssetType {
-  STOCK  // Ações
-  FUND   // Fundos
-  BOND   // Títulos
-  ETF    // ETFs
+  STOCK // Ações
+  FUND // Fundos
+  BOND // Títulos
+  ETF // ETFs
   CRYPTO // Criptomoedas
 }
 
 model Client {
-  id  String @id @default(cuid())
-  name String @db.VarChar(255)
-  email String @unique @db.VarChar(255)
-  status Status @default(ACTIVE)
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  status    Status   @default(ACTIVE)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("clients")
-
   // relationships
-  ClientAssetAllocation ClientAssetAllocation[]
+  Allocation Allocation[]
+
+  @@map("clients")
 }
 
 // DISCLAIMER: Current Value Field Decision
-// Decidi não incluir um campo 'currentValue' no modelo Asset pelos seguintes motivos:
-// 1. Valores de ativos são altamente voláteis e mudam constantemente
-// 2. Armazenar valores estáticos no banco pode gerar inconsistências
-// 3. Valores atuais devem ser obtidos via APIs externas em tempo real
-// 4. Esta abordagem garante dados sempre atualizados e precisos
-// 5. Evita problemas de sincronização e dados obsoletos
-
+// O correto deveria não utilizar um valor fixo para o valor atual do ativo,
+// mas sim calcular o valor atual com base no preço de mercado.
+// uma forma seria ter um servico que nos fornece o valor atual em realtime e criar um campo de 
+// fk para acessar esse serviço.
 model Asset {
-  id String @id @default(cuid())
-  name String @db.VarChar(255)
-  type AssetType
-  description String? @db.VarChar(500)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String       @id @default(cuid())
+  name         String       @db.VarChar(255)
+  type         AssetType
+  currentValue Decimal      @db.Decimal(10, 2)
+  symbol       String       @db.VarChar(50)
+  description  String?      @db.VarChar(500)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  // relationships
+  Allocation   Allocation[]
 
   @@map("assets")
-  // relationships
-  ClientAssetAllocation ClientAssetAllocation[]
 }
 
-model ClientAssetAllocation {
-  id String @id @default(cuid())
-  clientId String @map("client_id")
-  assetId String @map("asset_id")
-  quantity Decimal @db.Decimal(10, 2) 
-  purchasePrice Decimal @db.Decimal(10, 2) @map("purchase_price")
-
-  // DISCLAIMER: Purchase Date Field Decision
-  // Decidi não incluir um campo 'purchaseDate' no modelo ClientAssetAllocation pelos seguintes motivos:
-  // 1. Cada compra de ativo é registrada atomicamente como uma nova alocação
-  // 2. A informação de data de compra pode ser inferida através do campo 'createdAt'
+model Allocation {
+  id        String   @id @default(cuid())
+  clientId  String   @map("client_id")
+  assetId   String   @map("asset_id")
+  txCount   Int      @default(0) @map("number_of_transactions")
+  quantity  Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  client Client @relation(fields: [clientId], references: [id])
-  asset Asset @relation(fields: [assetId], references: [id])
+  client      Client        @relation(fields: [clientId], references: [id])
+  asset       Asset         @relation(fields: [assetId], references: [id])
+  Transaction Transaction[]
 
-  @@map("client_asset_allocations")
+  @@unique([clientId, assetId])
+  @@map("allocations")
+}
+
+model Transaction {
+  id           String          @id @default(uuid())
+  allocation   Allocation      @relation(fields: [allocationId], references: [id])
+  allocationId String          @map("allocation_id")
+  type         TransactionType
+  quantity     Decimal         @db.Decimal(10, 2)
+  price        Decimal         @db.Decimal(10, 2)
+  date         DateTime        @default(now())
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  BUY
+  SELL
 }
