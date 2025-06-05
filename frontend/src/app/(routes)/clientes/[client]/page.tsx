@@ -1,6 +1,6 @@
 import { columns } from "@/screens/client-transactions/table/client-transaction-columns";
 import { ClientTransactionTable } from "@/screens/client-transactions/table/client-transaction-table";
-import { fetchTransactions } from "@/services/transaction";
+import { fetchTransactions, Transaction } from "@/services/transaction";
 
 export default async function Home({
   params,
@@ -8,7 +8,16 @@ export default async function Home({
   params: Promise<{ client: string }>;
 }) {
   const { client } = await params;
-  const res = await fetchTransactions(client);
+  let res: {
+    results: Transaction[];
+    meta: { page: number; limit: number; total: number };
+  } | null = null;
+  try {
+    res = await fetchTransactions(client);
+  } catch {
+    console.error("aqui");
+    res = { results: [], meta: { page: 1, limit: 10, total: 0 } };
+  }
   return (
     <section>
       <div className="p-6">

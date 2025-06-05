@@ -16,20 +16,19 @@ export const columns: ColumnDef<Transaction>[] = [
         original: { date },
       },
     }) => {
-      return !isValid(date)
-        ? format(date, "dd/MM/yyyy")
-        : "Data inválida";
+      const newDate = new Date(date);
+      return isValid(newDate) ? format(newDate, "dd/MM/yyyy") : "Data inválida";
     },
   },
   {
     accessorKey: "asset.name",
     header: "Ativo",
-    id: "Ativo"
+    id: "Ativo",
   },
   {
     accessorKey: "type",
     header: "Tipo",
-    id: "Tipo"
+    id: "Tipo",
   },
   {
     accessorKey: "price",
@@ -39,7 +38,9 @@ export const columns: ColumnDef<Transaction>[] = [
         original: { price },
       },
     }) => {
-      return "R$ " + new Big(price).toFixed(2);
+      return isNaN(Number(price))
+        ? "R$ " + price
+        : "R$ " + new Big(price).toFixed(2);
     },
     id: "Preço/Unidade",
   },
@@ -51,7 +52,7 @@ export const columns: ColumnDef<Transaction>[] = [
         original: { quantity },
       },
     }) => {
-      return new Big(quantity).toFixed(2);
+      return isNaN(Number(quantity)) ? quantity : new Big(quantity).toFixed(2);
     },
     id: "Quantidade",
   },
@@ -63,7 +64,9 @@ export const columns: ColumnDef<Transaction>[] = [
         original: { quantity, price },
       },
     }) => {
-      return `R$ ${new Big(quantity).times(price).toFixed(2)}`;
+      return isNaN(Number(quantity)) && isNaN(Number(price))
+        ? "Valor inválido"
+        : `R$ ${new Big(parseFloat(quantity)).times(price).toFixed(2)}`;
     },
     id: "Valor total",
   },
