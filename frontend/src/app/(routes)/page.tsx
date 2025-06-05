@@ -1,5 +1,5 @@
-import { columns } from "@/pages/clients/table/columns";
-import { ClientsTable } from "@/pages/clients/table/client-table";
+import { columns } from "@/screens/clients/table/clients-table-columns";
+import { ClientsTable } from "@/screens/clients/table/client-table";
 import { fetchClients } from "@/services/client";
 
 export default async function Home() {

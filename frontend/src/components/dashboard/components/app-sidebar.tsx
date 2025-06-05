@@ -22,12 +22,12 @@ const data = {
   navMain: [
     {
       title: "Clientes",
-      url: "#",
+      url: "/",
       icon: IconDashboard,
     },
     {
       title: "Ativos Financeiros",
-      url: "#",
+      url: "/ativos",
       icon: IconListDetails,
     },
   ],

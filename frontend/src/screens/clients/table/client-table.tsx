@@ -52,7 +52,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { clientQueryKeys } from "@/queries/client-queryKey";
 import { Client, ClientStatus, fetchClients } from "@/services/client";
-import AddClientDialog from "./add-client-dialog";
+import AddClientDialog from "../dialogs/add-client-dialog";
 import { cn } from "@/lib/utils";
 
 type DataTableProps = {

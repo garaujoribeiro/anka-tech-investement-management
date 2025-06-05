@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { IconDotsVertical } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import EditClientDialog from "./edit-client-dialog";
-import ClientToggleStatusDialog from "./toggle-status-dialog";
-import DeleteClientDialog from "./delete-dialog";
+import EditClientDialog from "../dialogs/edit-client-dialog";
+import ClientToggleStatusDialog from "../dialogs/toggle-status-dialog";
+import DeleteClientDialog from "../dialogs/delete-dialog";
+import Link from "next/link";
 
 export enum ModalType {
   "EDITAR" = 1,
@@ -28,14 +29,28 @@ export const columns: ColumnDef<Client>[] = [
     accessorKey: "name",
     header: "Nome",
     size: 400,
+    id: "Nome",
+    cell: function ({
+      row: {
+        original: { name, id },
+      },
+    }) {
+      return (
+        <Button asChild variant="link">
+          <Link href={`/clientes/${id}`}>{name}</Link>
+        </Button>
+      );
+    },
   },
   {
     accessorKey: "email",
+    id: "E-mail",
     header: "E-mail",
     size: 400,
   },
   {
     accessorKey: "status",
+    id: "Status",
     header: "Status",
     size: 100,
     cell: function ({

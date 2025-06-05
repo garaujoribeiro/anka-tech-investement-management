@@ -68,7 +68,10 @@ export const fetchClientById = async (id: string) => {
   try {
     return await backend<Client>(API_ENDPOINTS.client(id));
   } catch (err) {
-    toast.error(getErrorMessage(err));
+    if (typeof window !== "undefined") {
+      toast.error(getErrorMessage(err));
+    }
+    throw new Error(getErrorMessage(err)); 
   }
 };
 
