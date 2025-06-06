@@ -9,14 +9,12 @@ const prismaPlugin: FastifyPluginAsync = async (fastify) => {
     await prisma.$connect();
     fastify.log.info("✅ Conectado ao banco com Prisma");
   } catch (err) {
-    fastify.log.error("❌ Erro ao conectar com o banco via Prisma:", err);
+    fastify.log.error(err);
     throw new Error("Falha ao conectar com o banco de dados");
   }
 
-  // Register the Prisma client as a decorator
   fastify.decorate("prisma", prisma);
 
-  // Ensure the Prisma client is closed when the Fastify instance is closed
   fastify.addHook("onClose", async (fastify) => {
     try {
       await fastify.prisma.$disconnect();

@@ -3,11 +3,7 @@ import { FastifyPluginAsync } from "fastify";
 import { AllocationService } from "../../services/allocations-service";
 
 const allocationServicePlugin: FastifyPluginAsync = async (fastify) => {
-  const allocationService = new AllocationService({
-    prisma: fastify.prisma,
-    httpErrors: fastify.httpErrors,
-    log: fastify.log,
-  });
+  const allocationService = new AllocationService(fastify);
 
   fastify.decorate("allocationService", allocationService);
 };

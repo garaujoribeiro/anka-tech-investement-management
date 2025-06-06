@@ -1,16 +1,11 @@
-import { Client, PrismaClient } from "../../generated/prisma";
+import { Client } from "../../generated/prisma";
 import { CreateClientDto } from "../schemas/clients/create-client-schema";
 import { GetClientsQuery } from "../schemas/clients/query-client-schema";
 import { FastifyInstance } from "fastify";
 import { UpdateClientDto } from "../schemas/clients/update-client-schema";
 import { QueryBuilder } from "../utils/queryBuilder";
 import { HttpError } from "@fastify/sensible";
-
-export interface ClientServiceDeps {
-  prisma: PrismaClient;
-  httpErrors: FastifyInstance["httpErrors"];
-  log: FastifyInstance["log"];
-}
+import { GetTransactionsQuery } from "../schemas/transactions/query-transaction-schema";
 
 /**
  * Serviço responsável por gerenciar operações relacionadas aos clientes,
@@ -32,7 +27,9 @@ export class ClientService {
       where: { email: data.email },
     });
     if (existingClient) {
-      return this.fastify.httpErrors.conflict("Cliente com este e-mail já existe");
+      return this.fastify.httpErrors.conflict(
+        "Cliente com este e-mail já existe"
+      );
     }
 
     try {
@@ -48,9 +45,11 @@ export class ClientService {
         message: "Cliente criado com sucesso",
       };
     } catch (error) {
-      console.log(this.fastify.log);
-      this.fastify.log.error("Erro ao criar cliente:", error);
-      return this.fastify.httpErrors.internalServerError("Falha ao criar cliente");
+      // console.log(this.fastify.log);
+      // this.fastify.log.error("Erro ao criar cliente:", error);
+      return this.fastify.httpErrors.internalServerError(
+        "Falha ao criar cliente"
+      );
     }
   }
 
@@ -81,9 +80,7 @@ export class ClientService {
     | HttpError
   > {
     try {
-      console.log("getClientsQuery", getClientsQuery);
       const query = new QueryBuilder(getClientsQuery)
-        .search(["name", "email"])
         .paginate()
         .order()
         .build();
@@ -106,7 +103,7 @@ export class ClientService {
         results,
       };
     } catch (error) {
-      this.fastify.log.error("Erro ao buscar clientes:", error);
+      // this.fastify.log.error("Erro ao buscar clientes:", error);
       return this.fastify.httpErrors.internalServerError(
         "Falha ao buscar clientes"
       );
@@ -131,8 +128,8 @@ export class ClientService {
       }
       return client;
     } catch (error) {
-      this.fastify.log.error("Erro ao buscar cliente por ID:", error);
-      throw this.fastify.httpErrors.internalServerError(
+      // this.fastify.log.error("Erro ao buscar cliente por ID:", error);
+      return this.fastify.httpErrors.internalServerError(
         "Falha ao buscar cliente"
       );
     }
@@ -148,7 +145,7 @@ export class ClientService {
       }
       return client;
     } catch (error) {
-      this.fastify.log.error("Erro ao buscar cliente por ID:", error);
+      // this.fastify.log.error("Erro ao buscar cliente por ID:", error);
       return this.fastify.httpErrors.internalServerError(
         "Falha ao buscar cliente"
       );
@@ -172,7 +169,7 @@ export class ClientService {
       }
       return client;
     } catch (error) {
-      this.fastify.log.error("Erro ao buscar cliente por e-mail:", error);
+      // this.fastify.log.error("Erro ao buscar cliente por e-mail:", error);
       return this.fastify.httpErrors.internalServerError(
         "Falha ao buscar cliente"
       );
@@ -208,7 +205,7 @@ export class ClientService {
         }
       }
 
-      const clientUpdated = this.fastify.prisma.client.update({
+      const clientUpdated = await this.fastify.prisma.client.update({
         where: { id },
         data,
       });
@@ -283,6 +280,33 @@ export class ClientService {
       console.error("Erro ao excluir cliente:", error);
       return this.fastify.httpErrors.internalServerError(
         "Falha ao excluir cliente"
+      );
+    }
+  }
+
+  async findClientTransactions({
+    id,
+    params,
+  }: {
+    id: string;
+    params: GetTransactionsQuery;
+  }) {
+    try {
+      const client = await this.fastify.prisma.client.findUnique({
+        where: { id },
+      });
+      if (!client) {
+        return this.fastify.httpErrors.notFound("Cliente não encontrado");
+      }
+
+      return this.fastify.transactionService.findTransactionsByClientId(
+        id,
+        params
+      );
+    } catch (error) {
+      // this.fastify.log.error("Falha ao buscar transações do cliente", error);
+      return this.fastify.httpErrors.internalServerError(
+        "Falha ao buscar transações do cliente"
       );
     }
   }

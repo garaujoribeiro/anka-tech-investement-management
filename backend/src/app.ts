@@ -6,6 +6,10 @@ import {
   validatorCompiler,
   ZodTypeProvider,
 } from "fastify-type-provider-zod";
+import allocationPluginService from "./plugins/services/04-allocation-service-plugin";
+import assetServicePlugin from "./plugins/services/05-asset-service-plugin";
+import transactionServicePlugin from "./plugins/services/06-transaction-service-plugin";
+import clientServicePlugin from "./plugins/services/07-client-service-plugin";
 
 export interface AppOptions
   extends FastifyServerOptions,
@@ -36,10 +40,20 @@ const app: FastifyPluginAsync<AppOptions> = async (
     options: opts,
   });
 
+  void fastify.register(allocationPluginService);
+
+  void fastify.register(assetServicePlugin);
+
+  void fastify.register(transactionServicePlugin);
+
+  void fastify.register(clientServicePlugin);
+
   void fastify.register(AutoLoad, {
     dir: join(__dirname, "routes"),
     options: opts,
   });
+
+  fastify.log.info("fastify instance:", fastify);
 };
 
 export default app;

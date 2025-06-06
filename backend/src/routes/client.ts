@@ -9,12 +9,18 @@ import {
   createClientSchema,
 } from "../schemas/clients/create-client-schema";
 import { UpdateClientDto } from "../schemas/clients/update-client-schema";
-import { ClientService } from "../services/client-service";
 import { HttpError } from "@fastify/sensible";
+import {
+  GetTransactionsQuery,
+  getTransactionsQuerySchema,
+} from "../schemas/transactions/query-transaction-schema";
+import {
+  CreateTransactionDto,
+  createTransactionSchema,
+} from "../schemas/transactions/create-transaction-schema";
+import { Prisma } from "../../generated/prisma";
 
-const clients: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
-  const clientService = new ClientService(fastify);
-
+const clients: FastifyPluginAsync = async (fastify, _opts): Promise<void> => {
   fastify.get(
     "/",
     {
@@ -36,7 +42,7 @@ const clients: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     },
     async function (request, reply) {
       const getClientsQuery = request.query as GetClientsQuery;
-      const results = await clientService.findAll(getClientsQuery);
+      const results = await fastify.clientService.findAll(getClientsQuery);
       return reply.send(results);
     }
   );
@@ -44,7 +50,7 @@ const clients: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
   // rota para receber um cliente específico
   fastify.get("/:id", async function (request, reply) {
     const { id } = request.params as { id: string };
-    const response = await clientService.findById(id);
+    const response = await fastify.clientService.findById(id);
     return reply.send(response);
   });
 
@@ -64,7 +70,7 @@ const clients: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     },
     async function (request, reply) {
       const clientData = request.body as CreateClientDto;
-      const newClientResponse = await clientService.create(clientData);
+      const newClientResponse = await fastify.clientService.create(clientData);
       if (newClientResponse instanceof HttpError) {
         return reply
           .status(newClientResponse.statusCode)
@@ -93,8 +99,12 @@ const clients: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     async function (request, reply) {
       const { id } = request.params as { id: string };
       const clientData = request.body as UpdateClientDto;
+      console.log(clientData);
       try {
-        const updateClientResponse = await clientService.update(id, clientData);
+        const updateClientResponse = await fastify.clientService.update(
+          id,
+          clientData
+        );
         return reply.send(updateClientResponse);
       } catch (error) {
         fastify.log.error(error);
@@ -122,11 +132,67 @@ const clients: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     async function (request, reply) {
       const { id } = request.params as { id: string };
       try {
-        const toggleClientResponse = await clientService.toggleStatus(id);
+        const toggleClientResponse = await fastify.clientService.toggleStatus(
+          id
+        );
         return reply.send(toggleClientResponse);
       } catch (error) {
         fastify.log.error(error);
         reply.status(500).send({ error: "Failed to toggle client status" });
+      }
+    }
+  );
+
+  fastify.get(
+    "/:id/transactions",
+    {
+      schema: {
+        params: z.object({
+          id: z.string().min(1, "O id do cliente é obrigatório"),
+        }),
+        querystring: getTransactionsQuerySchema,
+      },
+    },
+    async function (request, reply) {
+      const { id } = request.params as { id: string };
+      const query = request.query as GetTransactionsQuery;
+      try {
+        const response = await fastify.clientService.findClientTransactions({
+          id,
+          params: query,
+        });
+        return reply.send(response);
+      } catch (error) {
+        fastify.log.error(error);
+        reply.status(500).send({ error: "Falha ao puxar transacao" });
+      }
+    }
+  );
+
+  fastify.post(
+    "/:id/transactions",
+    {
+      schema: {
+        params: z.object({
+          id: z.string().min(1, "O id do cliente é obrigatório"),
+        }),
+        body: createTransactionSchema,
+      },
+    },
+    async function (request, reply) {
+      const { id } = request.params as { id: string };
+      const body = request.body as CreateTransactionDto;
+      try {
+        const response = await this.transactionService.create({
+          assetId: body.assetId,
+          clientId: id,
+          type: body.type,
+          quantity: new Prisma.Decimal(body.quantity),
+        });
+        return reply.send(response);
+      } catch (error) {
+        fastify.log.error(error);
+        reply.status(500).send({ error: "Falha ao criar transacao" });
       }
     }
   );
@@ -149,7 +215,7 @@ const clients: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     async function (request, reply) {
       const { id } = request.params as { id: string };
       try {
-        const deleteClientResponse = await clientService.delete(id);
+        const deleteClientResponse = await fastify.clientService.delete(id);
         return reply.status(200).send(deleteClientResponse);
       } catch (error) {
         fastify.log.error(error);

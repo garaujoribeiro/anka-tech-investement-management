@@ -1,14 +1,8 @@
 import { FastifyInstance } from "fastify";
-import { Asset, PrismaClient } from "../../generated/prisma";
+import { Asset } from "../../generated/prisma";
 import { GetAssetsQuery } from "../schemas/assets/query-assets-schema";
 import { QueryBuilder } from "../utils/queryBuilder";
 import { HttpError } from "@fastify/sensible";
-
-export interface AssetServiceDeps {
-  prisma: PrismaClient;
-  httpErrors: FastifyInstance["httpErrors"];
-  log: FastifyInstance["log"];
-}
 
 /**
  * Classe AssetService para gerenciar entidades Asset no banco de dados.
@@ -19,9 +13,9 @@ export class AssetService {
    * Cria uma instância de AssetService.
    * @param prisma - A instância do cliente Prisma para operações de banco de dados
    */
-  constructor(private deps: AssetServiceDeps) {}
+  constructor(private readonly fastify: FastifyInstance) {}
 
-  /**
+  /* 
    * Recupera todos os ativos do banco de dados.
    * @returns Uma promise que resolve para um array de todos os registros de ativos
    */
@@ -44,11 +38,13 @@ export class AssetService {
         .order()
         .build();
 
-      const total = await this.deps.prisma.client.count({ where: query.where });
+      const total = await this.fastify.prisma.client.count({
+        where: query.where,
+      });
 
       const totalPages = Math.ceil(total / getAssetQuery.limit);
 
-      const results = await this.deps.prisma.asset.findMany(query);
+      const results = await this.fastify.prisma.asset.findMany(query);
 
       return {
         meta: {
@@ -60,9 +56,9 @@ export class AssetService {
         results,
       };
     } catch (error) {
-      this.deps.log.error("Erro ao buscar clientes:", error);
-      return this.deps.httpErrors.internalServerError(
-        "Falha ao buscar clientes"
+      this.fastify.log.error("Erro ao buscar ativos:", error);
+      return this.fastify.httpErrors.internalServerError(
+        "Falha ao buscar ativos"
       );
     }
   }
@@ -74,17 +70,17 @@ export class AssetService {
    */
   async findById(id: string) {
     try {
-      const asset = await this.deps.prisma.asset.findUnique({
+      const asset = await this.fastify.prisma.asset.findUnique({
         where: { id },
       });
       if (!asset) {
-        return this.deps.httpErrors.notFound("Ativo não encontrado");
+        return this.fastify.httpErrors.notFound("Ativo não encontrado");
       }
       return asset;
     } catch (error) {
-      this.deps.log.error("Erro ao buscar cliente por ID:", error);
-      return this.deps.httpErrors.internalServerError(
-        "Falha ao buscar cliente"
+      this.fastify.log.error("Erro ao buscar ativo por ID:", error);
+      return this.fastify.httpErrors.internalServerError(
+        "Falha ao buscar ativo"
       );
     }
   }

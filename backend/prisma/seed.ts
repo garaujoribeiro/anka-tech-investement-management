@@ -1,30 +1,18 @@
-import { PrismaClient } from '../generated/prisma';
-import { faker } from '@faker-js/faker';
+import { PrismaClient } from "../generated/prisma";
+import { faker } from "@faker-js/faker";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Criando clientes
-  const clients = await Promise.all(
-    Array.from({ length: 5 }).map(() =>
-      prisma.client.create({
-        data: {
-          name: faker.person.fullName(),
-          email: faker.internet.email(),
-          status: faker.helpers.arrayElement(['ACTIVE', 'INACTIVE']),
-        },
-      })
-    )
-  );
-
-  // Criando ativos
+  // Criar alguns ativos
   const assets = await Promise.all(
-    Array.from({ length: 5 }).map(() =>
+    Array.from({ length: 10 }).map(() =>
       prisma.asset.create({
         data: {
-          name: faker.company.name(),
-          type: faker.helpers.arrayElement(['STOCK', 'FUND', 'BOND', 'ETF', 'CRYPTO']),
-          currentValue: faker.number.float({ min: 10, max: 1000, fractionDigits: 2 }),
+          name: faker.finance.accountName(),
+          type: faker.helpers.arrayElement(["STOCK", "FUND", "BOND", "ETF", "CRYPTO"]),
+          currentValue: new Decimal(faker.finance.amount({ min: 50, max: 500, dec: 2 })),
           symbol: faker.finance.currencyCode(),
           description: faker.lorem.sentence(),
         },
@@ -32,49 +20,76 @@ async function main() {
     )
   );
 
-  // Criando alocações
-  const allocations = await Promise.all(
-    clients.map((client) => {
+  for (let i = 0; i < 5; i++) {
+    const client = await prisma.client.create({
+      data: {
+        name: faker.person.fullName(),
+        email: faker.internet.email(),
+        status: "ACTIVE",
+      },
+    });
+
+    const allocations: Record<string, { id: string; quantity: Decimal }> = {};
+
+    for (let j = 0; j < 20; j++) {
       const asset = faker.helpers.arrayElement(assets);
-      return prisma.allocation.create({
+      const allocationKey = `${client.id}_${asset.id}`;
+
+      if (!allocations[allocationKey]) {
+        const allocation = await prisma.allocation.create({
+          data: {
+            clientId: client.id,
+            assetId: asset.id,
+            txCount: 0,
+            quantity: new Decimal(0),
+          },
+        });
+        allocations[allocationKey] = {
+          id: allocation.id,
+          quantity: allocation.quantity,
+        };
+      }
+
+      const allocation = allocations[allocationKey];
+      const txType = faker.helpers.arrayElement(["BUY", "SELL"] as const);
+      const quantity = new Decimal(faker.finance.amount({ min: 1, max: 10, dec: 2 }));
+      let newQuantity =
+        txType === "BUY" ? allocation.quantity.plus(quantity) : allocation.quantity.minus(quantity);
+
+      if (newQuantity.lessThanOrEqualTo(0)) {
+        newQuantity = allocation.quantity.plus(quantity);
+      }
+
+      await prisma.allocation.update({
+        where: { id: allocation.id },
         data: {
-          clientId: client.id,
-          assetId: asset.id,
-          quantity: faker.number.float({ min: 1, max: 100, fractionDigits: 2 }),
-          txCount: 2,
+          quantity: newQuantity,
+          txCount: { increment: 1 },
         },
       });
-    })
-  );
 
-  // Criando transações para cada alocação
-  for (const allocation of allocations) {
-    await prisma.transaction.createMany({
-      data: [
-        {
+      allocation.quantity = newQuantity;
+
+      await prisma.transaction.create({
+        data: {
           allocationId: allocation.id,
-          type: 'BUY',
-          quantity: faker.number.float({ min: 1, max: 50, fractionDigits: 2 }),
-          price: faker.number.float({ min: 10, max: 1000, fractionDigits: 2 }),
+          clientId: client.id,
+          assetId: asset.id,
+          type: txType,
+          quantity,
+          price: asset.currentValue,
           date: faker.date.past(),
         },
-        {
-          allocationId: allocation.id,
-          type: 'SELL',
-          quantity: faker.number.float({ min: 1, max: 50, fractionDigits: 2 }),
-          price: faker.number.float({ min: 10, max: 1000, fractionDigits: 2 }),
-          date: faker.date.recent(),
-        },
-      ],
-    });
+      });
+    }
   }
 
-  console.log('✅ Seeding concluído com sucesso');
+  console.log("✅ Seed finalizada com sucesso.");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("Erro no seed:", e);
     process.exit(1);
   })
   .finally(async () => {

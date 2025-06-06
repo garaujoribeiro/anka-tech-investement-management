@@ -1,8 +1,9 @@
 import { FastifyInstance } from "fastify";
-import { Prisma, PrismaClient, Transaction } from "../../generated/prisma"; // Adjust the import path as necessary
+import { Allocation, Prisma, Transaction } from "../../generated/prisma"; // Adjust the import path as necessary
 import { GetTransactionsQuery } from "../schemas/transactions/query-transaction-schema";
 import { QueryBuilder } from "../utils/queryBuilder";
 import { HttpError } from "@fastify/sensible";
+import { GetAllocationsByClientSchema } from "../schemas/clients/query-allocations-by-client.schema";
 
 interface HandleTransactionArgs {
   clientId: string;
@@ -13,13 +14,7 @@ interface HandleTransactionArgs {
 }
 
 export class AllocationService {
-  constructor(
-    private deps: {
-      prisma: PrismaClient;
-      httpErrors: FastifyInstance["httpErrors"];
-      log: FastifyInstance["log"];
-    }
-  ) {}
+  constructor(private fastify: FastifyInstance) {}
 
   /**
    * Recupera uma lista paginada de transações associadas a uma alocação específica.
@@ -52,19 +47,19 @@ export class AllocationService {
         .search(["type"])
         .build();
 
-      const allocation = await this.deps.prisma.allocation.findUnique({
+      const allocation = await this.fastify.prisma.allocation.findUnique({
         where: { id: allocationId },
       });
 
       if (!allocation) {
-        return this.deps.httpErrors.notFound("Alocação não encontrada");
+        return this.fastify.httpErrors.notFound("Alocação não encontrada");
       }
 
       const total = allocation?.txCount ?? 0;
 
       const totalPages = Math.ceil(total / getTransactionsQuery.limit);
 
-      const results = await this.deps.prisma.transaction.findMany({
+      const results = await this.fastify.prisma.transaction.findMany({
         skip: query.skip,
         take: query.take,
         where: {
@@ -84,9 +79,72 @@ export class AllocationService {
         results,
       };
     } catch (error) {
-      this.deps.log.error("Erro ao buscar transacoes:", error);
-      return this.deps.httpErrors.internalServerError(
+      this.fastify.log.error("Erro ao buscar transacoes:", error);
+      return this.fastify.httpErrors.internalServerError(
         "Falha ao buscar transações"
+      );
+    }
+  }
+
+  /**
+   * Recupera uma lista paginada de alocações para um cliente específico pelo seu ID.
+   *
+   * @param clientId - O identificador único do cliente cujas alocações devem ser recuperadas.
+   * @param  - Os parâmetros de consulta para busca, paginação e ordenação das alocações.
+   * @returns Uma promise que resolve para um objeto contendo metadados de paginação e a lista de alocações,
+   *          ou um HttpError se a operação falhar.
+   *
+   * @throws {HttpError} Se ocorrer um erro ao buscar as alocações.
+   */
+  async findByClientId(
+    clientId: string,
+    params: GetAllocationsByClientSchema
+  ): Promise<
+    | {
+        meta: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+        results: Allocation[];
+      }
+    | HttpError
+  > {
+    try {
+      const query = new QueryBuilder(params)
+        .search(["name", "email"])
+        .paginate()
+        .order()
+        .build();
+
+      const total = await this.fastify.prisma.allocation.count({
+        where: { ...query.where, clientId },
+      });
+
+      const totalPages = Math.ceil(total / params.limit);
+
+      const results = await this.fastify.prisma.allocation.findMany({
+        ...query,
+        where: {
+          ...query.where,
+          id: clientId,
+        },
+      });
+
+      return {
+        meta: {
+          page: params.page,
+          limit: params.limit,
+          total,
+          totalPages,
+        },
+        results,
+      };
+    } catch (error) {
+      this.fastify.log.error("Erro ao buscar alocacoes:", error);
+      return this.fastify.httpErrors.internalServerError(
+        "Falha ao buscar alocações"
       );
     }
   }
@@ -109,7 +167,7 @@ export class AllocationService {
       case "SELL":
         return this.handleSellAsset(args);
       default:
-        return this.deps.httpErrors.badRequest("Invalid transaction type");
+        return this.fastify.httpErrors.badRequest("Invalid transaction type");
     }
   }
 
@@ -193,12 +251,12 @@ export class AllocationService {
 
     // Se nao existir a alocação, lança um erro
     if (!allocation) {
-      return this.deps.httpErrors.notFound("Alocação não encontrada!");
+      return this.fastify.httpErrors.notFound("Alocação não encontrada!");
     }
 
     // Se a quantidade vendida for maior que a quantidade alocada, lança um erro
     if (allocation.quantity < quantity) {
-      return this.deps.httpErrors.badRequest(
+      return this.fastify.httpErrors.badRequest(
         "Quantidade insuficiente para venda!"
       );
     }

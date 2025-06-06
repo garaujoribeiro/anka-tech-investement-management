@@ -36,7 +36,8 @@ model Client {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // relationships
-  Allocation Allocation[]
+  Allocation  Allocation[]
+  Transaction Transaction[]
 
   @@map("clients")
 }
@@ -47,16 +48,17 @@ model Client {
 // uma forma seria ter um servico que nos fornece o valor atual em realtime e criar um campo de 
 // fk para acessar esse serviço.
 model Asset {
-  id           String       @id @default(cuid())
-  name         String       @db.VarChar(255)
+  id           String        @id @default(cuid())
+  name         String        @db.VarChar(255)
   type         AssetType
-  currentValue Decimal      @db.Decimal(10, 2)
-  symbol       String       @db.VarChar(50)
-  description  String?      @db.VarChar(500)
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
+  currentValue Decimal       @db.Decimal(10, 2)
+  symbol       String        @db.VarChar(50)
+  description  String?       @db.VarChar(500)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
   // relationships
   Allocation   Allocation[]
+  Transaction  Transaction[]
 
   @@map("assets")
 }
@@ -65,16 +67,16 @@ model Allocation {
   id        String   @id @default(cuid())
   clientId  String   @map("client_id")
   assetId   String   @map("asset_id")
-  txCount   Int      @default(0) @map("number_of_transactions")
-  quantity  Decimal  @db.Decimal(10, 2)
+  quantity  Decimal  @db.Decimal(12, 4)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  client      Client        @relation(fields: [clientId], references: [id])
-  asset       Asset         @relation(fields: [assetId], references: [id])
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  asset       Asset         @relation(fields: [assetId], references: [id], onDelete: Restrict)
   Transaction Transaction[]
 
   @@unique([clientId, assetId])
+  @@index([clientId, assetId])
   @@map("allocations")
 }
 
@@ -82,15 +84,22 @@ model Transaction {
   id           String          @id @default(uuid())
   allocation   Allocation      @relation(fields: [allocationId], references: [id])
   allocationId String          @map("allocation_id")
+  clientId     String          @map("client_id")
+  assetId      String          @map("asset_id")
+  client       Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  asset        Asset           @relation(fields: [assetId], references: [id], onDelete: Restrict)
   type         TransactionType
-  quantity     Decimal         @db.Decimal(10, 2)
+  quantity     Decimal         @db.Decimal(12, 4)
   price        Decimal         @db.Decimal(10, 2)
   date         DateTime        @default(now())
 
+  @@index([clientId])
+  @@index([assetId])
+  @@index([date])
   @@map("transactions")
 }
 
 enum TransactionType {
-  BUY
-  SELL
+  BUY // Represents a purchase transaction
+  SELL // Represents a sale transaction
 }
