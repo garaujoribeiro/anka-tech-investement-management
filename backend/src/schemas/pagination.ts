@@ -12,6 +12,7 @@ export const paginationSchema = z.object({
       message: "O número da página deve ser pelo menos 1",
     })
     .default(1),
+
   limit: z.coerce
     .number({
       invalid_type_error: "O limite deve ser um número",

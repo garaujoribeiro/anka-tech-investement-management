@@ -62,7 +62,7 @@ const clients: FastifyPluginAsync = async (fastify, _opts): Promise<void> => {
         body: createClientSchema,
         response: {
           201: z.object({
-            user: z.any(), // Defina o esquema do cliente aqui
+            client: z.any(), // Defina o esquema do cliente aqui
             message: z.string(),
           }),
         },
@@ -99,17 +99,11 @@ const clients: FastifyPluginAsync = async (fastify, _opts): Promise<void> => {
     async function (request, reply) {
       const { id } = request.params as { id: string };
       const clientData = request.body as UpdateClientDto;
-      console.log(clientData);
-      try {
-        const updateClientResponse = await fastify.clientService.update(
-          id,
-          clientData
-        );
-        return reply.send(updateClientResponse);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.status(500).send({ error: "Falha ao atualizar o cliente" });
-      }
+      const updateClientResponse = await fastify.clientService.update(
+        id,
+        clientData
+      );
+      return reply.send(updateClientResponse);
     }
   );
 
@@ -131,15 +125,8 @@ const clients: FastifyPluginAsync = async (fastify, _opts): Promise<void> => {
     },
     async function (request, reply) {
       const { id } = request.params as { id: string };
-      try {
-        const toggleClientResponse = await fastify.clientService.toggleStatus(
-          id
-        );
-        return reply.send(toggleClientResponse);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.status(500).send({ error: "Failed to toggle client status" });
-      }
+      const toggleClientResponse = await fastify.clientService.toggleStatus(id);
+      return reply.send(toggleClientResponse);
     }
   );
 
@@ -156,16 +143,11 @@ const clients: FastifyPluginAsync = async (fastify, _opts): Promise<void> => {
     async function (request, reply) {
       const { id } = request.params as { id: string };
       const query = request.query as GetTransactionsQuery;
-      try {
-        const response = await fastify.clientService.findClientTransactions({
-          id,
-          params: query,
-        });
-        return reply.send(response);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.status(500).send({ error: "Falha ao puxar transacao" });
-      }
+      const response = await fastify.clientService.findClientTransactions({
+        id,
+        params: query,
+      });
+      return reply.send(response);
     }
   );
 
@@ -214,13 +196,8 @@ const clients: FastifyPluginAsync = async (fastify, _opts): Promise<void> => {
     },
     async function (request, reply) {
       const { id } = request.params as { id: string };
-      try {
-        const deleteClientResponse = await fastify.clientService.delete(id);
-        return reply.status(200).send(deleteClientResponse);
-      } catch (error) {
-        fastify.log.error(error);
-        reply.status(500).send({ error: "Failed to delete client" });
-      }
+      const deleteClientResponse = await fastify.clientService.delete(id);
+      return reply.send(deleteClientResponse);
     }
   );
 };
