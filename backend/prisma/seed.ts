@@ -40,7 +40,6 @@ async function main() {
           data: {
             clientId: client.id,
             assetId: asset.id,
-            txCount: 0,
             quantity: new Decimal(0),
           },
         });
@@ -64,7 +63,6 @@ async function main() {
         where: { id: allocation.id },
         data: {
           quantity: newQuantity,
-          txCount: { increment: 1 },
         },
       });
 

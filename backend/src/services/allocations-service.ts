@@ -55,7 +55,12 @@ export class AllocationService {
         return this.fastify.httpErrors.notFound("Alocação não encontrada");
       }
 
-      const total = allocation?.txCount ?? 0;
+      const total = await this.fastify.prisma.allocation.count({
+        where: {
+          id: allocation.id,
+          ...query.where,
+        },
+      });
 
       const totalPages = Math.ceil(total / getTransactionsQuery.limit);
 
@@ -74,7 +79,7 @@ export class AllocationService {
           page: getTransactionsQuery.page,
           limit: getTransactionsQuery.limit,
           total,
-          totalPages,
+          totalPages
         },
         results,
       };
@@ -200,7 +205,6 @@ export class AllocationService {
           assetId,
           clientId,
           quantity,
-          txCount: 1,
         },
       });
     }
@@ -216,9 +220,6 @@ export class AllocationService {
       data: {
         quantity: {
           increment: quantity,
-        },
-        txCount: {
-          increment: 1,
         },
       },
     });
@@ -251,12 +252,12 @@ export class AllocationService {
 
     // Se nao existir a alocação, lança um erro
     if (!allocation) {
-      return this.fastify.httpErrors.notFound("Alocação não encontrada!");
+      throw this.fastify.httpErrors.notFound("Alocação não encontrada!");
     }
 
     // Se a quantidade vendida for maior que a quantidade alocada, lança um erro
-    if (allocation.quantity < quantity) {
-      return this.fastify.httpErrors.badRequest(
+  if (!allocation.quantity.greaterThanOrEqualTo(quantity)) {
+      throw this.fastify.httpErrors.badRequest(
         "Quantidade insuficiente para venda!"
       );
     }
@@ -272,9 +273,6 @@ export class AllocationService {
       data: {
         quantity: {
           decrement: quantity,
-        },
-        txCount: {
-          increment: 1, // Incrementa o contador de transações}
         },
       },
     });

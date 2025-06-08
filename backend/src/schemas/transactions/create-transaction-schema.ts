@@ -1,11 +1,9 @@
 import { z } from "zod";
 
-// Enum para tipo de transação
 export const transactionTypeSchema = z.enum(["BUY", "SELL"]);
 
-// Schema para criação de uma transação (sem allocationId)
 export const createTransactionSchema = z.object({
-  assetId: z.string().uuid(),
+  assetId: z.string().cuid(),
   type: transactionTypeSchema,
   quantity: z.number().positive("Quantidade deve ser positiva"),
   date: z.coerce.date().optional(), // opcional, default para `now()` no backend

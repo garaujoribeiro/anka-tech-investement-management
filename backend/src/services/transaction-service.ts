@@ -1,6 +1,7 @@
 import { Prisma } from "../../generated/prisma";
 import { FastifyInstance } from "fastify";
 import { QueryBuilder } from "../utils/queryBuilder";
+import { HttpError } from "@fastify/sensible";
 
 export class TransactionService {
   constructor(private readonly fastify: FastifyInstance) {}
@@ -61,6 +62,9 @@ export class TransactionService {
       });
     } catch (error) {
       this.fastify.log.error("Erro ao criar transação:", error);
+      if (error instanceof HttpError) {
+        return error;
+      }
       return this.fastify.httpErrors.internalServerError(
         "Falha ao criar transação"
       );
